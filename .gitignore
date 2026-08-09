@@ -328,3 +328,19 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# Unity-specific
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+[Oo]utputDebugLog.txt
+*.csproj.user
+*.userId
+[Oo]utput/
+*.apk
+*.aab
+*.unitypackage

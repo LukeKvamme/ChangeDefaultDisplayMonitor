@@ -1,12 +1,11 @@
 ﻿{
-	"name": "MyFirstMod",
+	"name": "ChangeDefaultDisplayMonitor",
 	"version_number": "1.0.0",
-	"website_url": "",
-	"description": "My first Mod",
+	"website_url": "https://github.com/LukeKvamme/ChangeDefaultDisplayMonitor",
+	"description": "Lets you choose which monitor the game runs on, right from the in-game settings: Adds a **Display Monitor** option to **Options → Video**. This setting persists across restarts, so the game will launch onto whichever display you set.",
 	"dependencies": [
 		"bbepis-BepInExPack-5.4.2108",
 		"RiskofThunder-HookGenPatcher-1.2.3",
-		"RiskofThunder-R2API_Items-1.0.1",
 		"RiskofThunder-R2API_Language-1.0.0"
 	]
 }

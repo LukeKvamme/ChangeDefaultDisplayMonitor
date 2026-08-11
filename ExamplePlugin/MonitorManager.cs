@@ -53,6 +53,8 @@ namespace MonitorSwitcher
 
     internal sealed class DisplayInfo
     {
+        private const string DeviceNamePrefix = "DISPLAY";
+
         public string DeviceName;
         public string FullName;
         public string FriendlyName;
@@ -60,7 +62,21 @@ namespace MonitorSwitcher
         public NativeRect WorkArea;
         public bool IsPrimary;
 
-        public string Label => $"{FriendlyName} ({Bounds.Width} x {Bounds.Height})";
+        public string Label => $"Display {DisplayNumber} ({Bounds.Width} x {Bounds.Height})";
+
+        private string DisplayNumber
+        {
+            get
+            {
+                if (DeviceName != null
+                    && DeviceName.StartsWith(DeviceNamePrefix, StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(DeviceName.Substring(DeviceNamePrefix.Length), out int number))
+                {
+                    return number.ToString();
+                }
+                return "?";
+            }
+        }
     }
 
     internal static class MonitorManager

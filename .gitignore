@@ -344,3 +344,7 @@ ASALocalRun/
 *.apk
 *.aab
 *.unitypackage
+
+# Session artifacts
+.kilo/
+HANDOFF-*.md

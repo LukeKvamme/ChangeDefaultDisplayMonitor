@@ -347,3 +347,15 @@ Add to this as you hit them. Each line here cost real debugging time.
   so a convar value like `\\.\DISPLAY1` reaches `SetString` as `.`. Archived
   convar values must avoid backslashes; store the stripped device name
   (`DISPLAY1`) and normalize at match time.
+- **`Screen.resolutions` is snapshotted from the startup monitor and never
+  refreshes when the game window moves to another display**, so the vanilla
+  Resolution dropdown is stuck on the boot monitor's mode list. Rebuild it from
+  Win32 `EnumDisplaySettings(deviceName, i, ref DEVMODE)` for the window's
+  current monitor instead: hook `On.RoR2.UI.ResolutionControl.
+  GenerateResolutionOptions`, after orig set the private `resolutionOptions`
+  array (construct the private nested `ResolutionOption` via reflection — its
+  implicit ctor is PUBLIC, search `Public | NonPublic`) and repopulate
+  `resolutionDropdown`; `SubmitCurrentValue` reads the array so applying still
+  works. Also refresh live via `MonitorManager.DisplayChanged` ->
+  `ResolutionListFix.RefreshActiveControls()` so an in-settings monitor swap
+  updates the list immediately. DEVMODE marshaling needs `Pack = 1`.

@@ -24,8 +24,15 @@ namespace MonitorSwitcher
             On.RoR2.UI.SettingsPanelController.Start += SettingsRowInjector.OnSettingsPanelStart;
             On.RoR2.UI.SettingsPanelController.OnEnable += SettingsRowInjector.OnSettingsPanelEnable;
             On.RoR2.RoR2Application.OnMainMenuControllerInitialized += OnMainMenuControllerInitialized;
+            MonitorManager.DisplayChanged += OnDisplayChanged;
+            ResolutionListFix.Hook();
 
             Logger.LogInfo($"{PluginGUID} AWAKE_COMPLETE");
+        }
+
+        private static void OnDisplayChanged()
+        {
+            ResolutionListFix.RefreshActiveControls();
         }
 
         private void OnCacheConVars(On.RoR2.Console.orig_CacheConVars orig, RoR2.Console self)
@@ -75,6 +82,8 @@ namespace MonitorSwitcher
             On.RoR2.UI.SettingsPanelController.Start -= SettingsRowInjector.OnSettingsPanelStart;
             On.RoR2.UI.SettingsPanelController.OnEnable -= SettingsRowInjector.OnSettingsPanelEnable;
             On.RoR2.RoR2Application.OnMainMenuControllerInitialized -= OnMainMenuControllerInitialized;
+            MonitorManager.DisplayChanged -= OnDisplayChanged;
+            ResolutionListFix.Unhook();
             Log.Info($"{PluginGUID} unloaded");
         }
     }

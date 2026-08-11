@@ -51,6 +51,53 @@ namespace MonitorSwitcher
         public string DeviceKey;
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 1)]
+    internal struct DevMode
+    {
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string DeviceName;
+
+        public ushort SpecVersion;
+        public ushort DriverVersion;
+        public ushort Size;
+        public ushort DriverExtra;
+        public uint Fields;
+        public int PositionX;
+        public int PositionY;
+        public uint DisplayOrientation;
+        public uint DisplayFixedOutput;
+        public short Color;
+        public short Duplex;
+        public short YResolution;
+        public short TTOption;
+        public short Collate;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+        public string FormName;
+
+        public ushort LogPixels;
+        public uint BitsPerPel;
+        public uint PelsWidth;
+        public uint PelsHeight;
+        public uint DisplayFlags;
+        public uint DisplayFrequency;
+        public uint ICMethod;
+        public uint ICMIntent;
+        public uint MediaType;
+        public uint DitherType;
+        public uint Reserved1;
+        public uint Reserved2;
+        public uint PanningWidth;
+        public uint PanningHeight;
+    }
+
+    internal struct DisplayModeInfo
+    {
+        public int Width;
+        public int Height;
+        public int RefreshRate;
+    }
+
     internal sealed class DisplayInfo
     {
         private const string DeviceNamePrefix = "DISPLAY";
@@ -99,6 +146,9 @@ namespace MonitorSwitcher
             [DllImport("user32.dll", CharSet = CharSet.Unicode)]
             internal static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DisplayDevice lpDisplayDevice, uint dwFlags);
 
+            [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+            internal static extern bool EnumDisplaySettings(string lpszDeviceName, uint iModeNum, ref DevMode lpDevMode);
+
             [DllImport("user32.dll")]
             internal static extern IntPtr GetActiveWindow();
 
@@ -141,6 +191,8 @@ namespace MonitorSwitcher
             return list;
         }
 
+        public static event Action DisplayChanged;
+
         public static string GetCurrentDisplayDeviceName()
         {
             IntPtr hwnd = GetGameWindowHandle();
@@ -157,6 +209,65 @@ namespace MonitorSwitcher
                 }
             }
             return GetPrimary()?.DeviceName;
+        }
+
+        public static string GetCurrentDisplayFullName()
+        {
+            IntPtr hwnd = GetGameWindowHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                IntPtr hMonitor = Native.MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+                if (hMonitor != IntPtr.Zero)
+                {
+                    var info = new MonitorInfoEx { CbSize = Marshal.SizeOf(typeof(MonitorInfoEx)) };
+                    if (Native.GetMonitorInfo(hMonitor, ref info))
+                    {
+                        return info.SzDevice;
+                    }
+                }
+            }
+            return GetPrimary()?.FullName ?? string.Empty;
+        }
+
+        public static List<DisplayModeInfo> GetModesForMonitor(string fullDeviceName)
+        {
+            var modes = new List<DisplayModeInfo>();
+            var mode = NewDevMode();
+            for (uint i = 0; Native.EnumDisplaySettings(fullDeviceName, i, ref mode); i++)
+            {
+                if (mode.PelsWidth > 0 && mode.PelsHeight > 0 && mode.DisplayFrequency > 0)
+                {
+                    modes.Add(new DisplayModeInfo
+                    {
+                        Width = (int)mode.PelsWidth,
+                        Height = (int)mode.PelsHeight,
+                        RefreshRate = (int)mode.DisplayFrequency
+                    });
+                }
+                mode = NewDevMode();
+            }
+            return modes;
+        }
+
+        public static DisplayModeInfo? GetCurrentMode(string fullDeviceName)
+        {
+            var mode = NewDevMode();
+            if (Native.EnumDisplaySettings(fullDeviceName, uint.MaxValue, ref mode)
+                && mode.PelsWidth > 0 && mode.PelsHeight > 0)
+            {
+                return new DisplayModeInfo
+                {
+                    Width = (int)mode.PelsWidth,
+                    Height = (int)mode.PelsHeight,
+                    RefreshRate = (int)mode.DisplayFrequency
+                };
+            }
+            return null;
+        }
+
+        private static DevMode NewDevMode()
+        {
+            return new DevMode { Size = (ushort)Marshal.SizeOf(typeof(DevMode)) };
         }
 
         public static bool TryMoveToMonitor(string deviceName, out string error)
@@ -189,12 +300,15 @@ namespace MonitorSwitcher
                 Screen.fullScreenMode = FullScreenMode.Windowed;
                 PlaceWindow(hwnd, target.Bounds);
                 Screen.fullScreenMode = savedMode;
+                DisplayChanged?.Invoke();
                 return true;
             }
 
             if (savedMode == FullScreenMode.FullScreenWindow)
             {
                 PlaceWindow(hwnd, target.Bounds);
+                Log.Info($"MonitorSwitcher: post-move current display = '{GetCurrentDisplayFullName()}'");
+                DisplayChanged?.Invoke();
                 return true;
             }
 
@@ -212,6 +326,7 @@ namespace MonitorSwitcher
                 Native.MoveWindow(hwnd, target.WorkArea.Left, target.WorkArea.Top, target.WorkArea.Width, target.WorkArea.Height, true);
             }
 
+            DisplayChanged?.Invoke();
             return true;
         }
 

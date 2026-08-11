@@ -21,7 +21,7 @@ Nothing runs in the background. The setting is applied once when the game starts
 
 ## Notes
 
-- **Windows only.** Multi-monitor setup required.
+- **Windows only.** Multi-monitor setup required — with a single monitor the setting simply shows your one display and selecting it does nothing.
 - The **Resolution** dropdown updates to list the resolutions of the monitor you're currently on, so you can switch to a 4K monitor and select 4K without restarting.
 - If the saved monitor isn't connected anymore, the game falls back to your primary display.
 - Advanced: you can also set it from the developer console with `display_monitor DISPLAY1` (values are `DISPLAY1`, `DISPLAY2`, ...).

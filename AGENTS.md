@@ -327,3 +327,23 @@ Add to this as you hit them. Each line here cost real debugging time.
   Lemurian** whose death controller NREs (`DevotedLemurianController.
   OnDevotedBodyDead`) — a vanilla SotS bug that aborts the death chain.
   Spawn a normal body if you need a clean death.
+- **The in-game Video settings list is a `VerticalLayout` GameObject** (has
+  `VerticalLayoutGroup` + `ContentSizeFitter`) under `SettingsSubPanel, Video`.
+  Each row is a direct child: `Option, Resolution` (label `Text, Name` +
+  `CarouselRect` holding the control) or `SettingsEntryButton, ...`.
+  `ResolutionControl.transform.parent` is the **row**, and its `.parent` is the
+  list. Parent cloned settings rows into the list (last child = bottom); cloning
+  into a row object makes the clone overlap the row's content — invisible but
+  blocking clicks.
+- **`RoR2BepInExPack.VanillaFixes.FixConVar` IL-patches
+  `Console.InternalInitConVarsCoroutine` and replaces `CacheConVars`**, so the
+  game's own convar scan never runs and `On.RoR2.Console.CacheConVars` never
+  fires in a stock profile. Register mod ConVars from `On.RoR2.Console.
+  LoadStartupConfigs` (verified: `void orig_LoadStartupConfigs(Console)`) —
+  the dictionaries exist by then and it runs before `exec config` replays
+  archived values. Registration is via reflection on the private
+  `Console.RegisterConVarInternal`; guard with a `FindConVar` pre-check.
+- **The console `Lexer` treats `\` as ignorable and `.` as an identifier char**,
+  so a convar value like `\\.\DISPLAY1` reaches `SetString` as `.`. Archived
+  convar values must avoid backslashes; store the stripped device name
+  (`DISPLAY1`) and normalize at match time.

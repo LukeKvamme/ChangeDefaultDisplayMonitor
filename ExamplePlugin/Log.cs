@@ -1,6 +1,6 @@
 ﻿using BepInEx.Logging;
 
-namespace ExamplePlugin
+namespace MonitorSwitcher
 {
     internal static class Log
     {

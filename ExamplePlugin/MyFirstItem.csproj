@@ -1,8 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>MyFirstItem</AssemblyName>
-    <RootNamespace>MyFirstItem</RootNamespace>
+    <AssemblyName>MonitorSwitcher</AssemblyName>
+    <RootNamespace>MonitorSwitcher</RootNamespace>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameLibs)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameLibs)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

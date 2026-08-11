@@ -3,6 +3,7 @@ using R2API;
 using RoR2;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
 
 namespace ExamplePlugin
 {
@@ -37,9 +38,9 @@ namespace ExamplePlugin
         // we will deprecate this mod.
         // Change the PluginAuthor and the PluginName !
         public const string PluginGUID = PluginAuthor + "." + PluginName;
-        public const string PluginAuthor = "AuthorName";
-        public const string PluginName = "ExamplePlugin";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginAuthor = "Ovalsquare";
+        public const string PluginName = "MyFirstItem";
+        public const string PluginVersion = "0.0.1";
 
         // We need our item definition to persist through our functions, and therefore make it a class field.
         private static ItemDef myItemDef;
@@ -54,17 +55,18 @@ namespace ExamplePlugin
             myItemDef = ScriptableObject.CreateInstance<ItemDef>();
 
             // Language Tokens, explained there https://risk-of-thunder.github.io/R2Wiki/Mod-Creation/Assets/Localization/
-            myItemDef.name = "EXAMPLE_CLOAKONKILL_NAME";
-            myItemDef.nameToken = "EXAMPLE_CLOAKONKILL_NAME";
-            myItemDef.pickupToken = "EXAMPLE_CLOAKONKILL_PICKUP";
-            myItemDef.descriptionToken = "EXAMPLE_CLOAKONKILL_DESC";
-            myItemDef.loreToken = "EXAMPLE_CLOAKONKILL_LORE";
+            myItemDef.name = "VAMPIRIC_FANGS_NAME";
+            myItemDef.nameToken = "VAMPIRIC_FANGS_NAME";
+            myItemDef.pickupToken = "VAMPIRIC_FANGS_PICKUP";
+            myItemDef.descriptionToken = "VAMPIRIC_FANGS_DESC";
+            myItemDef.loreToken = "VAMPIRIC_FANGS_LORE";
 
             // The tier determines what rarity the item is:
             // Tier1=white, Tier2=green, Tier3=red, Lunar=Lunar, Boss=yellow,
             // and finally NoTier is generally used for helper items, like the tonic affliction
-#pragma warning disable Publicizer001 // Accessing a member that was not originally public. Here we ignore this warning because with how this example is setup we are forced to do this
-            myItemDef.tier = ItemTier.Tier2;      // instead of _itemTierDef = ...#pragma warning restore Publicizer001
+            #pragma warning disable Publicizer001 // Accessing a member that was not originally public. Here we ignore this warning because with how this example is setup we are forced to do this
+            myItemDef.tier = ItemTier.Tier2;      // instead of _itemTierDef = ...
+            #pragma warning restore Publicizer001
             // Instead of loading the itemtierdef directly, you can also do this like below as a workaround
             // myItemDef.deprecatedTier = ItemTier.Tier2;
 
@@ -95,32 +97,40 @@ namespace ExamplePlugin
 
             // But now we have defined an item, but it doesn't do anything yet. So we'll need to define that ourselves.
             GlobalEventManager.onCharacterDeathGlobal += GlobalEventManager_onCharacterDeathGlobal;
+            
+            Logger.LogInfo($"{PluginGUID} AWAKE_COMPLETE"); // keep at the end of awake, proves whole registration path ran
         }
 
         private void GlobalEventManager_onCharacterDeathGlobal(DamageReport report)
         {
-            // If a character was killed by the world, we shouldn't do anything.
+            if (!NetworkServer.active)
+            {
+                return;
+            }
+
             if (!report.attacker || !report.attackerBody)
             {
                 return;
             }
 
-            var attackerCharacterBody = report.attackerBody;
+            var attackerBody = report.attackerBody;
+            HealthComponent attackerHC = attackerBody.healthComponent;
 
-            // We need an inventory to do check for our item
-            if (attackerCharacterBody.inventory)
+            if (attackerBody.inventory && attackerHC)
             {
-                // Store the amount of our item we have
-                var garbCount = attackerCharacterBody.inventory.GetItemCount(myItemDef.itemIndex);
-                if (garbCount > 0 &&
-                    // Roll for our 50% chance.
-                    Util.CheckRoll(50, attackerCharacterBody.master))
+                int stackCount = attackerBody.inventory.GetItemCount(myItemDef.itemIndex);
+                if (stackCount > 0)
                 {
-                    // Since we passed all checks, we now give our attacker the cloaked buff.
-                    // Note how we are scaling the buff duration depending on the number of the custom item in our inventory.
-                    attackerCharacterBody.AddTimedBuff(RoR2Content.Buffs.Cloak, 3 + garbCount);
+                    float healAmount = attackerHC.fullHealth * 0.02f * stackCount;
+                    float actuallyHealed = attackerHC.Heal(healAmount, default(ProcChainMask), nonRegen: true);
+                    Log.Info($"[VampiricFangs] Kill heal: stackCount={stackCount}, fullHealth={attackerHC.fullHealth}, requested={healAmount}, applied={actuallyHealed}");
                 }
             }
+        }
+
+        private void OnDestroy()
+        {
+            GlobalEventManager.onCharacterDeathGlobal -= GlobalEventManager_onCharacterDeathGlobal;
         }
 
         // The Update() method is run on every frame of the game.

@@ -258,3 +258,72 @@ Add to this as you hit them. Each line here cost real debugging time.
   populated yet** — `_itemTierDef` stays null and the getter falls back to
   `deprecatedTier` (Tier1). An item appearing as the wrong tier is a
   registration-timing bug, not a value bug.
+- **Never launch the game while an instance is running.** `launch_game()`
+  kills the old one by default. Two instances fight over the profile's
+  LogOutput.log, and the second DebugBridge cannot bind its port — so
+  `console()` talks to the OLD process while you read logs from the new one.
+  Nothing errors; the results are just silently wrong.
+- **Kilo's MCP config key is `mcp`, not `mcpServers`.** Tool wrappers rename
+  things. Read the tool's own docs rather than assuming the general
+  convention applies.
+  - **One deployment mechanism per project.** Either an MSBuild post-build copy
+  or `deploy()`, never both — two copies of the same plugin in `plugins/` and
+  `scripts/` load twice, and the symptom is every hook firing twice rather
+  than an error.
+- **Starting a run from the console (this profile):** `host 0` →
+  `gamemode ClassicRun` → `pregame_start_run`, in that order. Recorded in
+  `run_start_sequence`; call `start_run()`. Verify with `console("__run")`.
+  `run_print_seed` is verification only; `app_info` is not needed.
+- **When the agent doesn't know a console command, the answer is
+  `console_help(filter=...)`, never a web search.** Commands come from
+  whatever mods this profile has installed, so no external source can be
+  authoritative and training data will be wrong or stale.
+  - **`stage1_pod 0` skips the escape pod drop-in animation.** Insert after
+  `host 0` in the start sequence. Saves several seconds per iteration.
+- **A BepInEx install in the GAME directory shadows the r2modman profile.**
+  Doorstop resolves `target_assembly` relative to the game dir, so without
+  DOORSTOP_* env vars the game loads that one: its plugins, its log. Every
+  devloop tool then reads a file nothing writes to — while `console()` keeps
+  working, because the bridge is loaded from the shadowing install.
+  `launch_game` now forces the profile via env vars; `profile_info()` reports
+  `stale_bepinex_in_game_dir`.
+- **When a tool reports nothing, verify the file it reads is the file being
+  written.** "No output" and "reading the wrong path" are indistinguishable
+  from inside the tool. Compare sizes and mtimes before debugging the code.
+- **Doorstop precedence on Windows (4.0.0): ini < env < args, but env does
+  NOT actually override the ini — tested.** Command-line args DO override it
+  (verified: with `enabled=false` in the game-dir ini, launching with
+  `--doorstop-enabled true --doorstop-target-assembly <profile preloader>`
+  loaded BepInEx 5.4.21 and the profile log grew). Use `--doorstop-enabled`
+  / `--doorstop-target-assembly` to point at a profile. Setting
+  `enabled=false` in the game-dir ini lets Steam launch vanilla while devloop
+  launches modded via args. The ini's `target_assembly` should stay empty so a
+  stale profile path cannot resurface. `BepInEx.stale` in the game dir is
+  inert (not named `BepInEx`, so Doorstop never resolves it) and can be
+  deleted.
+- **A .sln referencing no projects builds successfully and produces nothing.**
+  Always set `csproj` to the .csproj file, never a directory — pointing
+  `dotnet build` at a folder makes it pick up whatever .sln is there.
+- **MCP servers are long-lived subprocesses; code changes need a client-side
+  restart.** devloop's config hot-reloads on mtime, but edits to devloop.py
+  do not take effect until the server is restarted in Kilo.
+- **A UTF-8 BOM in `config.json` kills the devloop server at startup.** Some
+  editors save with a BOM; `load_config()` (devloop.py:133) read with
+  `encoding="utf8"`, which throws `JSONDecodeError: Unexpected UTF-8 BOM` —
+  the server crashes before any tool registers, so all devloop tools
+  silently disappear from the client. Now reads with `utf-8-sig` (BOM or
+  not), but a config saved with a BOM is still worth stripping if the tools
+  ever vanish again. Symptom: devloop tools missing while ror2-codebase
+  works fine. Probe: run `devloop.py` standalone and watch it die in
+  `load_config`.
+- **`kill_all`/`kill`/`true_kill` cannot test on-kill effects.** They call
+  `HealthComponent.Suicide` with no killer, so `DamageReport.attacker` is
+  null and any `!report.attacker` guard returns early — the effect silently
+  never fires, and it looks like the mod is broken. `onCharacterDeathGlobal`
+  fires from `HealthComponent.TakeDamageProcess`, so a kill attributed to a
+  body with inventory is the only path that exercises item logic. Have the
+  player kill something, or drive damage through a console command that sets
+  `DamageInfo.attacker`. Also: `spawn_ai Lemurian` spawns a **Devoted
+  Lemurian** whose death controller NREs (`DevotedLemurianController.
+  OnDevotedBodyDead`) — a vanilla SotS bug that aborts the death chain.
+  Spawn a normal body if you need a clean death.

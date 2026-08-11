@@ -348,3 +348,5 @@ ASALocalRun/
 # Session artifacts
 .kilo/
 HANDOFF-*.md
+AGENTS.md
+FUTURE-WORK.md
